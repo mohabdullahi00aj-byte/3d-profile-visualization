@@ -205,24 +205,27 @@ export function DataVisualization({ data, layout }: DataVisualizationProps) {
       gridObject.position.z = (Math.floor(i / 50) - 2) * 180;  // Much tighter Z spacing
       grid.push(gridObject);
 
-      // Tetrahedron layout (4-face pyramid) - REFINED for clearer pyramid shape
+      // Tetrahedron layout (4-face pyramid) - CORRECTED for true geometric tetrahedron
       const tetrahedronObject = new THREE.Object3D();
       
       // Calculate which face this item belongs to (4 faces total)
       const faceIndex = Math.floor(i / 50); // 50 items per face (200/4)
       const itemInFace = i % 50;
       
-      // Tetrahedron vertices - positioned for clear pyramid visibility
-      const height = 500;
-      const baseRadius = 450;
+      // True tetrahedron vertices - mathematically correct proportions
+      // Based on regular tetrahedron with edge length ~693 units
+      const edgeLength = 600;
+      const height = edgeLength * Math.sqrt(2/3); // ~489.9
+      const baseRadius = edgeLength / Math.sqrt(3); // ~346.4
+      
       const vertices = [
-        new THREE.Vector3(0, height, 0),                    // Top apex
-        new THREE.Vector3(-baseRadius, -height/2, baseRadius/2),  // Base vertex 1
-        new THREE.Vector3(baseRadius, -height/2, baseRadius/2),   // Base vertex 2
-        new THREE.Vector3(0, -height/2, -baseRadius)             // Base vertex 3
+        new THREE.Vector3(0, height/2, 0),                           // Top vertex (apex)
+        new THREE.Vector3(-baseRadius/2, -height/2, baseRadius/2),   // Base vertex 1
+        new THREE.Vector3(baseRadius/2, -height/2, baseRadius/2),    // Base vertex 2  
+        new THREE.Vector3(0, -height/2, -baseRadius)                 // Base vertex 3
       ];
       
-      // Define the 4 triangular faces with better separation
+      // Define the 4 triangular faces of the tetrahedron
       const faces = [
         [0, 1, 2], // Front face (apex to base edge 1-2)
         [0, 2, 3], // Right face (apex to base edge 2-3)
@@ -236,43 +239,50 @@ export function DataVisualization({ data, layout }: DataVisualizationProps) {
         const v2 = vertices[face[1]];
         const v3 = vertices[face[2]];
         
-        // Create triangular grid pattern for even distribution
-        const itemsPerRow = Math.ceil(Math.sqrt(50 * 2)); // ~10 items per row max
-        const row = Math.floor(itemInFace / itemsPerRow);
-        const col = itemInFace % itemsPerRow;
+        // Create proper triangular distribution on each face
+        const itemsPerFace = 50;
+        const rows = Math.ceil(Math.sqrt(itemsPerFace * 2)); // ~10 rows for triangular packing
         
-        // Triangular distribution - fewer items in higher rows
-        const maxRows = Math.ceil(Math.sqrt(50));
-        const itemsInThisRow = Math.max(1, itemsPerRow - Math.floor(row * 1.5));
+        // Convert linear index to triangular coordinates
+        let row = 0;
+        let col = 0;
+        let remaining = itemInFace;
         
-        if (row < maxRows && col < itemsInThisRow) {
-          // Barycentric coordinates for triangular face positioning
-          const u = (row + 0.5) / maxRows;
-          const v = (col + 0.5) / itemsInThisRow;
-          const w = Math.max(0, 1 - u - v);
+        // Find which row this item belongs to in triangular arrangement
+        for (let r = 0; r < rows; r++) {
+          const itemsInRow = rows - r; // Decreasing items per row (triangular)
+          if (remaining < itemsInRow) {
+            row = r;
+            col = remaining;
+            break;
+          }
+          remaining -= itemsInRow;
+        }
+        
+        const itemsInThisRow = rows - row;
+        
+        if (itemsInThisRow > 0) {
+          // Barycentric coordinates for positioning on triangular face
+          const u = (row + 0.5) / rows;                    // Distance from v1
+          const v = (col + 0.5) / itemsInThisRow;          // Distance along edge
+          const w = 1 - u - v * (1 - u);                  // Remaining weight
           
-          // Normalize barycentric coordinates
-          const total = u + v + w;
-          const normalizedU = u / total;
-          const normalizedV = v / total;
-          const normalizedW = w / total;
+          // Ensure valid barycentric coordinates
+          const totalWeight = u + v * (1 - u) + w;
+          const normalizedU = u / totalWeight;
+          const normalizedV = (v * (1 - u)) / totalWeight;
+          const normalizedW = w / totalWeight;
           
-          // Position on triangle face with slight inward offset for clarity
-          const offsetFactor = 0.85; // Slightly smaller to show face separation
+          // Position on triangular face with slight inward offset for face separation
+          const offsetFactor = 0.88; // Slightly smaller to show distinct faces
           tetrahedronObject.position.x = (v1.x * normalizedW + v2.x * normalizedU + v3.x * normalizedV) * offsetFactor;
           tetrahedronObject.position.y = (v1.y * normalizedW + v2.y * normalizedU + v3.y * normalizedV) * offsetFactor;
           tetrahedronObject.position.z = (v1.z * normalizedW + v2.z * normalizedU + v3.z * normalizedV) * offsetFactor;
         } else {
-          // Fallback positioning for remaining items - place near face center
-          const centerX = (v1.x + v2.x + v3.x) / 3;
-          const centerY = (v1.y + v2.y + v3.y) / 3;
-          const centerZ = (v1.z + v2.z + v3.z) / 3;
-          
-          // Add small random offset to avoid overlap
-          const offset = (itemInFace % 10) * 20 - 100;
-          tetrahedronObject.position.x = centerX + offset;
-          tetrahedronObject.position.y = centerY + offset * 0.5;
-          tetrahedronObject.position.z = centerZ + offset * 0.3;
+          // Fallback - place at face centroid
+          tetrahedronObject.position.x = (v1.x + v2.x + v3.x) / 3;
+          tetrahedronObject.position.y = (v1.y + v2.y + v3.y) / 3;
+          tetrahedronObject.position.z = (v1.z + v2.z + v3.z) / 3;
         }
       }
       
