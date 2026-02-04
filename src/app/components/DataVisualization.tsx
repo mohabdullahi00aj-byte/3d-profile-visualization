@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { CSS3DRenderer, CSS3DObject } from 'three/addons/renderers/CSS3DRenderer.js';
-import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { TrackballControls } from 'three/addons/controls/TrackballControls.js';
 import { PersonData, getNetWorthColor, formatNetWorth } from '@/app/utils/googleSheets';
 
 interface DataVisualizationProps {
@@ -14,7 +14,7 @@ export function DataVisualization({ data, layout }: DataVisualizationProps) {
   const rendererRef = useRef<CSS3DRenderer | null>(null);
   const sceneRef = useRef<THREE.Scene | null>(null);
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
-  const controlsRef = useRef<OrbitControls | null>(null);
+  const controlsRef = useRef<TrackballControls | null>(null);
   const objectsRef = useRef<CSS3DObject[]>([]);
   const targetsRef = useRef<{
     table: THREE.Object3D[];
@@ -29,7 +29,6 @@ export function DataVisualization({ data, layout }: DataVisualizationProps) {
     grid: [],
     tetrahedron: [],
   });
-  const [isGridLayout, setIsGridLayout] = useState(false);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -56,15 +55,16 @@ export function DataVisualization({ data, layout }: DataVisualizationProps) {
     containerRef.current.appendChild(renderer.domElement);
     rendererRef.current = renderer;
 
-    // Initialize OrbitControls for drag-based camera movement
-    const controls = new OrbitControls(camera, renderer.domElement);
-    controls.enableDamping = true;
-    controls.dampingFactor = 0.05;
-    controls.enablePan = false; // Disable panning
-    controls.enableZoom = true; // Allow zoom
-    controls.enableRotate = true; // Allow rotation only on drag
-    controls.autoRotate = false;
-    controls.target.set(0, 0, 0); // Always look at center
+    // Initialize TrackballControls for stable camera movement
+    const controls = new TrackballControls(camera, renderer.domElement);
+    controls.rotateSpeed = 1.0;
+    controls.zoomSpeed = 1.2;
+    controls.panSpeed = 0.8;
+    controls.noZoom = false;
+    controls.noPan = false;
+    controls.staticMoving = true;
+    controls.dynamicDampingFactor = 0.3;
+    controls.keys = ['KeyA', 'KeyS', 'KeyD'];
     controlsRef.current = controls;
 
     // Create objects for each data item
@@ -306,18 +306,8 @@ export function DataVisualization({ data, layout }: DataVisualizationProps) {
     const render = () => {
       if (!cameraRef.current || !rendererRef.current || !sceneRef.current || !controlsRef.current) return;
 
-      const controls = controlsRef.current;
-      
-      if (isGridLayout) {
-        // GRID LAYOUT: Fixed camera position and disable controls
-        camera.position.set(1200, 800, 1600);
-        camera.lookAt(0, 0, 0);
-        controls.enabled = false; // Disable controls for grid layout
-      } else {
-        // OTHER LAYOUTS: Enable drag-based controls
-        controls.enabled = true;
-        controls.update(); // Update controls for damping
-      }
+      // Update TrackballControls - this handles all camera movement
+      controlsRef.current.update();
       
       renderer.render(scene, camera);
     };
@@ -350,53 +340,6 @@ export function DataVisualization({ data, layout }: DataVisualizationProps) {
   useEffect(() => {
     const targets = targetsRef.current[layout];
     const objects = objectsRef.current;
-    const controls = controlsRef.current;
-
-    // Set grid layout flag for camera control
-    setIsGridLayout(layout === 'grid');
-
-    // Configure controls based on layout
-    if (controls) {
-      if (layout === 'grid') {
-        // Grid layout: Disable all controls
-        controls.enabled = false;
-      } else {
-        // Other layouts: Enable drag-based controls
-        controls.enabled = true;
-        controls.enableRotate = true;
-        controls.enablePan = false;
-        controls.enableZoom = true;
-        
-        // Set optimal camera distance for each layout type
-        let optimalDistance;
-        switch (layout) {
-          case 'table':
-            optimalDistance = 3000;
-            break;
-          case 'sphere':
-            optimalDistance = 2500;
-            break;
-          case 'helix':
-            optimalDistance = 2800;
-            break;
-          case 'tetrahedron':
-            optimalDistance = 2700;
-            break;
-          default:
-            optimalDistance = 3000;
-        }
-        
-        // Set camera distance via controls
-        const camera = cameraRef.current;
-        if (camera) {
-          const direction = new THREE.Vector3();
-          camera.getWorldDirection(direction);
-          direction.multiplyScalar(-optimalDistance);
-          camera.position.copy(direction);
-          controls.update();
-        }
-      }
-    }
 
     const duration = 2000;
     const startTime = Date.now();
