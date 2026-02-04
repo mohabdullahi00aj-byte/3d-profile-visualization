@@ -1,18 +1,16 @@
 import { useEffect, useState } from 'react';
-import { GoogleOAuthProvider, GoogleLogin, CredentialResponse } from '@react-oauth/google';
-import { DataVisualization } from '@/app/components/DataVisualization';
-import { fetchGoogleSheetData, PersonData } from '@/app/utils/googleSheets';
+import { GoogleOAuthProvider, GoogleLogin } from '@react-oauth/google';
+import { DataVisualization } from './components/DataVisualization.jsx';
+import { fetchGoogleSheetData } from './utils/googleSheets.js';
 import { LogOut } from 'lucide-react';
 
 const GOOGLE_CLIENT_ID = '119704642625-c0pm1nooff8kfkqvt5kh57efpi17bgea.apps.googleusercontent.com';
 
-type Layout = 'table' | 'sphere' | 'helix' | 'grid' | 'tetrahedron';
-
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [userData, setUserData] = useState<any>(null);
-  const [data, setData] = useState<PersonData[]>([]);
-  const [layout, setLayout] = useState<Layout>('table');
+  const [userData, setUserData] = useState(null);
+  const [data, setData] = useState([]);
+  const [layout, setLayout] = useState('table');
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -37,7 +35,7 @@ function App() {
     }
   };
 
-  const handleLoginSuccess = (credentialResponse: CredentialResponse) => {
+  const handleLoginSuccess = (credentialResponse) => {
     console.log('Login Success:', credentialResponse);
     
     // Decode JWT token to get user info

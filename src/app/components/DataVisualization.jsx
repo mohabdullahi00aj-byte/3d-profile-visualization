@@ -1,29 +1,18 @@
 import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import { CSS3DRenderer, CSS3DObject } from 'three/addons/renderers/CSS3DRenderer.js';
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
+import { TrackballControls } from 'three/addons/controls/TrackballControls.js';
 import * as TWEEN from '@tweenjs/tween.js';
-import { PersonData, getNetWorthColor, formatNetWorth } from '@/app/utils/googleSheets';
+import { getNetWorthColor, formatNetWorth } from '../utils/googleSheets.js';
 
-interface DataVisualizationProps {
-  data: PersonData[];
-  layout: 'table' | 'sphere' | 'helix' | 'grid' | 'tetrahedron';
-}
-
-export function DataVisualization({ data, layout }: DataVisualizationProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const sceneRef = useRef<THREE.Scene | null>(null);
-  const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
-  const rendererRef = useRef<CSS3DRenderer | null>(null);
-  const controlsRef = useRef<OrbitControls | null>(null);
-  const objectsRef = useRef<CSS3DObject[]>([]);
-  const targetsRef = useRef<{
-    table: THREE.Object3D[];
-    sphere: THREE.Object3D[];
-    helix: THREE.Object3D[];
-    grid: THREE.Object3D[];
-    tetrahedron: THREE.Object3D[];
-  }>({
+export function DataVisualization({ data, layout }) {
+  const containerRef = useRef(null);
+  const sceneRef = useRef(null);
+  const cameraRef = useRef(null);
+  const rendererRef = useRef(null);
+  const controlsRef = useRef(null);
+  const objectsRef = useRef([]);
+  const targetsRef = useRef({
     table: [],
     sphere: [],
     helix: [],
@@ -56,15 +45,19 @@ export function DataVisualization({ data, layout }: DataVisualizationProps) {
     containerRef.current.appendChild(renderer.domElement);
     rendererRef.current = renderer;
 
-    // Controls - TypeScript-safe OrbitControls
-    const controls = new OrbitControls(camera, renderer.domElement);
-    controls.enableRotate = true;        // drag only
-    controls.enablePan = false;          // prevents layout shift illusion
-    controls.enableZoom = true;
-    controls.enableDamping = true;
-    controls.dampingFactor = 0.08;
-    controls.rotateSpeed = 0.6;
+    // Controls - TrackballControls (JavaScript compatible)
+    const controls = new TrackballControls(camera, renderer.domElement);
+    controls.minDistance = 500;
+    controls.maxDistance = 6000;
     controlsRef.current = controls;
+
+    // Render function
+    const render = () => {
+      renderer.render(scene, camera);
+    };
+
+    // Add change listener
+    controls.addEventListener('change', render);
 
     // Create objects
     const objects: CSS3DObject[] = [];
@@ -300,13 +293,12 @@ export function DataVisualization({ data, layout }: DataVisualizationProps) {
     objectsRef.current = objects;
     targetsRef.current = { table, sphere, helix, grid, tetrahedron };
 
-    // Animation loop - ONLY camera movement happens here
-    let animationId: number;
+    // Animation loop - exactly like official Three.js example
+    let animationId;
     const animate = () => {
       animationId = requestAnimationFrame(animate);
       TWEEN.update();
-      controls.update(); // ← ONLY camera movement happens here
-      renderer.render(scene, camera);
+      controls.update();
     };
     animate();
 
@@ -315,16 +307,18 @@ export function DataVisualization({ data, layout }: DataVisualizationProps) {
       camera.aspect = window.innerWidth / window.innerHeight;
       camera.updateProjectionMatrix();
       renderer.setSize(window.innerWidth, window.innerHeight);
+      render();
     };
     window.addEventListener('resize', onWindowResize);
 
     // Initial render
-    renderer.render(scene, camera);
+    render();
 
     return () => {
       cancelAnimationFrame(animationId);
       window.removeEventListener('resize', onWindowResize);
       if (controls) {
+        controls.removeEventListener('change', render);
         controls.dispose();
       }
       if (containerRef.current && renderer.domElement) {

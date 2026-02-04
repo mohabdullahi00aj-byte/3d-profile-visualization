@@ -1,12 +1,4 @@
-export interface PersonData {
-  name: string;
-  age: number;
-  occupation: string;
-  netWorth: number;
-  photo?: string; // Optional photo URL
-}
-
-export async function fetchGoogleSheetData(): Promise<PersonData[]> {
+export async function fetchGoogleSheetData() {
   try {
     // Convert the published HTML URL to CSV export URL
     const sheetId = '1vSuhMMQASquMlnnasRDuGDPXGldZ3srGWfENnemvb9hs2e6_Nn5jovs27AFFoB9mtK7-DJIX8hy4tbA';
@@ -33,9 +25,9 @@ export async function fetchGoogleSheetData(): Promise<PersonData[]> {
   }
 }
 
-function parseCSV(csvText: string): PersonData[] {
+function parseCSV(csvText) {
   const lines = csvText.split('\n');
-  const data: PersonData[] = [];
+  const data = [];
   
   // Skip header row
   for (let i = 1; i < lines.length; i++) {
@@ -57,7 +49,7 @@ function parseCSV(csvText: string): PersonData[] {
       const cleanNetWorth = netWorthString.replace(/[$,"]/g, ''); // Remove $, commas, and quotes
       const netWorth = parseFloat(cleanNetWorth) || 0;
       
-      const person: PersonData = {
+      const person = {
         name: name,
         age: age,
         occupation: country, // Using country as occupation since there's no occupation column
@@ -68,7 +60,7 @@ function parseCSV(csvText: string): PersonData[] {
       // Debug logging for first few records
       if (i <= 3) {
         const colorName = netWorth < 100000 ? 'RED' : netWorth < 200000 ? 'ORANGE' : 'GREEN';
-        console.log(`${person.name}: $${netWorth.toLocaleString()} → ${colorName}`);
+        console.log(`${person.name}: ${netWorth.toLocaleString()} → ${colorName}`);
       }
       
       data.push(person);
@@ -80,8 +72,8 @@ function parseCSV(csvText: string): PersonData[] {
 }
 
 // Helper function to properly parse CSV lines with quoted values
-function parseCSVLine(line: string): string[] {
-  const result: string[] = [];
+function parseCSVLine(line) {
+  const result = [];
   let current = '';
   let inQuotes = false;
   
@@ -104,7 +96,7 @@ function parseCSVLine(line: string): string[] {
   return result;
 }
 
-function generateMockData(): PersonData[] {
+function generateMockData() {
   const names = [
     'John Smith', 'Emily Johnson', 'Michael Brown', 'Sarah Davis', 'James Wilson',
     'Jessica Martinez', 'David Anderson', 'Jennifer Taylor', 'Robert Thomas', 'Lisa Moore',
@@ -119,7 +111,7 @@ function generateMockData(): PersonData[] {
     'Content Strategist', 'Operations Manager', 'Security Engineer', 'Creative Director'
   ];
   
-  const data: PersonData[] = [];
+  const data = [];
   
   for (let i = 0; i < 200; i++) {
     // Create varied net worth distribution - ensure good color variety
@@ -150,7 +142,7 @@ function generateMockData(): PersonData[] {
   return data;
 }
 
-export function getNetWorthColor(netWorth: number): string {
+export function getNetWorthColor(netWorth) {
   if (netWorth < 100000) {
     return '#ef4444'; // Red
   } else if (netWorth < 200000) {
@@ -160,11 +152,11 @@ export function getNetWorthColor(netWorth: number): string {
   }
 }
 
-export function formatNetWorth(netWorth: number): string {
+export function formatNetWorth(netWorth) {
   if (netWorth >= 1000000) {
-    return `$${(netWorth / 1000000).toFixed(1)}M`;
+    return `${(netWorth / 1000000).toFixed(1)}M`;
   } else if (netWorth >= 1000) {
-    return `$${(netWorth / 1000).toFixed(0)}K`;
+    return `${(netWorth / 1000).toFixed(0)}K`;
   }
-  return `$${netWorth.toFixed(0)}`;
+  return `${netWorth.toFixed(0)}`;
 }
