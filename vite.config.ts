@@ -5,11 +5,14 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [
-    // The React and Tailwind plugins are both required for Make, even if
-    // Tailwind is not being actively used – do not remove them
+    // The React and Tailwind plugins are both required
     react(),
     tailwindcss(),
   ],
+
+  // 👇 ADD THIS (VERY IMPORTANT FOR GITHUB PAGES)
+  base: '/3d-profile-visualization/',
+
   resolve: {
     alias: {
       // Alias @ to the src directory
@@ -17,6 +20,6 @@ export default defineConfig({
     },
   },
 
-  // File types to support raw imports. Never add .css, .tsx, or .ts files to this.
+  // File types to support raw imports
   assetsInclude: ['**/*.svg', '**/*.csv'],
 })

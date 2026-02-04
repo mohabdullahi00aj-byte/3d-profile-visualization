@@ -6,7 +6,7 @@ import { LogOut } from 'lucide-react';
 
 const GOOGLE_CLIENT_ID = '119704642625-c0pm1nooff8kfkqvt5kh57efpi17bgea.apps.googleusercontent.com';
 
-type Layout = 'table' | 'sphere' | 'helix' | 'grid';
+type Layout = 'table' | 'sphere' | 'helix' | 'grid' | 'tetrahedron';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -192,6 +192,16 @@ function App() {
               }`}
             >
               Grid 
+            </button>
+            <button
+              onClick={() => setLayout('tetrahedron')}
+              className={`px-4 py-2 rounded-lg transition-all ${
+                layout === 'tetrahedron'
+                  ? 'bg-cyan-500 text-white shadow-lg'
+                  : 'bg-white/5 text-gray-300 hover:bg-white/10'
+              }`}
+            >
+              Tetrahedron
             </button>
           </div>
         </div>

@@ -5,7 +5,7 @@ import { PersonData, getNetWorthColor, formatNetWorth } from '@/app/utils/google
 
 interface DataVisualizationProps {
   data: PersonData[];
-  layout: 'table' | 'sphere' | 'helix' | 'grid';
+  layout: 'table' | 'sphere' | 'helix' | 'grid' | 'tetrahedron';
 }
 
 export function DataVisualization({ data, layout }: DataVisualizationProps) {
@@ -19,11 +19,13 @@ export function DataVisualization({ data, layout }: DataVisualizationProps) {
     sphere: THREE.Object3D[];
     helix: THREE.Object3D[];
     grid: THREE.Object3D[];
+    tetrahedron: THREE.Object3D[];
   }>({
     table: [],
     sphere: [],
     helix: [],
     grid: [],
+    tetrahedron: [],
   });
   const [mouseX, setMouseX] = useState(0);
   const [mouseY, setMouseY] = useState(0);
@@ -61,6 +63,7 @@ export function DataVisualization({ data, layout }: DataVisualizationProps) {
     const sphere: THREE.Object3D[] = [];
     const helix: THREE.Object3D[] = [];
     const grid: THREE.Object3D[] = [];
+    const tetrahedron: THREE.Object3D[] = [];
 
     // Take up to 200 items for visualization
     const visualData = data.slice(0, 200);
@@ -165,10 +168,65 @@ export function DataVisualization({ data, layout }: DataVisualizationProps) {
       gridObject.position.y = (-(Math.floor(i / 5) % 10) + 4.5) * 220;  // Reduced from 300
       gridObject.position.z = (Math.floor(i / 50) - 2) * 180;  // Much tighter Z spacing
       grid.push(gridObject);
+
+      // Tetrahedron layout (4-face pyramid)
+      const tetrahedronObject = new THREE.Object3D();
+      
+      // Calculate which face this item belongs to (4 faces total)
+      const faceIndex = Math.floor(i / 50); // 50 items per face (200/4)
+      const itemInFace = i % 50;
+      
+      // Tetrahedron vertices (4 points of pyramid)
+      const vertices = [
+        new THREE.Vector3(0, 400, 0),      // Top vertex
+        new THREE.Vector3(-400, -200, 400), // Front-left base
+        new THREE.Vector3(400, -200, 400),  // Front-right base
+        new THREE.Vector3(0, -200, -400)    // Back base
+      ];
+      
+      // Define the 4 triangular faces
+      const faces = [
+        [0, 1, 2], // Top-front face
+        [0, 2, 3], // Top-right face  
+        [0, 3, 1], // Top-left face
+        [1, 2, 3]  // Bottom face
+      ];
+      
+      if (faceIndex < 4) {
+        const face = faces[faceIndex];
+        const v1 = vertices[face[0]];
+        const v2 = vertices[face[1]];
+        const v3 = vertices[face[2]];
+        
+        // Distribute items in triangular pattern on this face
+        const rows = Math.ceil(Math.sqrt(50)); // ~7 rows
+        const row = Math.floor(itemInFace / rows);
+        const col = itemInFace % rows;
+        const maxCols = rows - Math.floor(row * 0.5); // Triangular distribution
+        
+        if (col < maxCols) {
+          // Barycentric coordinates for triangular distribution
+          const u = (row + 1) / (rows + 1);
+          const v = (col + 1) / (maxCols + 1);
+          const w = 1 - u - v;
+          
+          // Position on triangle face
+          tetrahedronObject.position.x = v1.x * w + v2.x * u + v3.x * v;
+          tetrahedronObject.position.y = v1.y * w + v2.y * u + v3.y * v;
+          tetrahedronObject.position.z = v1.z * w + v2.z * u + v3.z * v;
+        } else {
+          // Fallback for extra items - place near face center
+          tetrahedronObject.position.x = (v1.x + v2.x + v3.x) / 3;
+          tetrahedronObject.position.y = (v1.y + v2.y + v3.y) / 3;
+          tetrahedronObject.position.z = (v1.z + v2.z + v3.z) / 3;
+        }
+      }
+      
+      tetrahedron.push(tetrahedronObject);
     });
 
     objectsRef.current = objects;
-    targetsRef.current = { table, sphere, helix, grid };
+    targetsRef.current = { table, sphere, helix, grid, tetrahedron };
 
     // Animation loop
     let animationId: number;
@@ -247,6 +305,9 @@ export function DataVisualization({ data, layout }: DataVisualizationProps) {
         break;
       case 'grid':
         optimalDistance = 2000; // Not used for grid (fixed position)
+        break;
+      case 'tetrahedron':
+        optimalDistance = 2700; // Good distance for pyramid view
         break;
       default:
         optimalDistance = 3000;
