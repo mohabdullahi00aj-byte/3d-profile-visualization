@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { CSS3DRenderer, CSS3DObject } from 'three/addons/renderers/CSS3DRenderer.js';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { PersonData, getNetWorthColor, formatNetWorth } from '@/app/utils/googleSheets';
 
 interface DataVisualizationProps {
@@ -13,6 +14,7 @@ export function DataVisualization({ data, layout }: DataVisualizationProps) {
   const rendererRef = useRef<CSS3DRenderer | null>(null);
   const sceneRef = useRef<THREE.Scene | null>(null);
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
+  const controlsRef = useRef<OrbitControls | null>(null);
   const objectsRef = useRef<CSS3DObject[]>([]);
   const targetsRef = useRef<{
     table: THREE.Object3D[];
@@ -27,12 +29,7 @@ export function DataVisualization({ data, layout }: DataVisualizationProps) {
     grid: [],
     tetrahedron: [],
   });
-  const [mouseX, setMouseX] = useState(0);
-  const [mouseY, setMouseY] = useState(0);
-  const [cameraDistance, setCameraDistance] = useState(3000);
   const [isGridLayout, setIsGridLayout] = useState(false);
-  const [targetRotation, setTargetRotation] = useState(0);
-  const [currentRotation, setCurrentRotation] = useState(0);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -58,6 +55,17 @@ export function DataVisualization({ data, layout }: DataVisualizationProps) {
     renderer.setSize(window.innerWidth, window.innerHeight);
     containerRef.current.appendChild(renderer.domElement);
     rendererRef.current = renderer;
+
+    // Initialize OrbitControls for drag-based camera movement
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
+    controls.enablePan = false; // Disable panning
+    controls.enableZoom = true; // Allow zoom
+    controls.enableRotate = true; // Allow rotation only on drag
+    controls.autoRotate = false;
+    controls.target.set(0, 0, 0); // Always look at center
+    controlsRef.current = controls;
 
     // Create objects for each data item
     const objects: CSS3DObject[] = [];
@@ -296,28 +304,19 @@ export function DataVisualization({ data, layout }: DataVisualizationProps) {
     };
 
     const render = () => {
-      if (!cameraRef.current || !rendererRef.current || !sceneRef.current) return;
+      if (!cameraRef.current || !rendererRef.current || !sceneRef.current || !controlsRef.current) return;
 
+      const controls = controlsRef.current;
+      
       if (isGridLayout) {
-        // GRID LAYOUT: Completely fixed camera position
+        // GRID LAYOUT: Fixed camera position and disable controls
         camera.position.set(1200, 800, 1600);
         camera.lookAt(0, 0, 0);
+        controls.enabled = false; // Disable controls for grid layout
       } else {
-        // OTHER LAYOUTS: LOCKED smooth rotation with interpolation
-        // Smoothly interpolate to target rotation to eliminate jitter
-        const rotationDiff = targetRotation - currentRotation;
-        const newRotation = currentRotation + rotationDiff * 0.05; // Very smooth interpolation
-        setCurrentRotation(newRotation);
-        
-        const radius = cameraDistance;
-        
-        // LOCKED camera orbit - data objects NEVER move
-        camera.position.x = Math.sin(newRotation) * radius;
-        camera.position.z = Math.cos(newRotation) * radius;
-        camera.position.y = 0; // Completely locked Y position
-        
-        // Always look at exact center - no drift
-        camera.lookAt(0, 0, 0);
+        // OTHER LAYOUTS: Enable drag-based controls
+        controls.enabled = true;
+        controls.update(); // Update controls for damping
       }
       
       renderer.render(scene, camera);
@@ -338,42 +337,66 @@ export function DataVisualization({ data, layout }: DataVisualizationProps) {
     return () => {
       cancelAnimationFrame(animationId);
       window.removeEventListener('resize', handleResize);
+      if (controlsRef.current) {
+        controlsRef.current.dispose();
+      }
       if (containerRef.current && renderer.domElement) {
         containerRef.current.removeChild(renderer.domElement);
       }
     };
-  }, [data, currentRotation]); // Remove mouseX, mouseY dependencies
+  }, [data]); // Remove currentRotation dependency
 
   // Transform to layout
   useEffect(() => {
     const targets = targetsRef.current[layout];
     const objects = objectsRef.current;
+    const controls = controlsRef.current;
 
     // Set grid layout flag for camera control
     setIsGridLayout(layout === 'grid');
 
-    // Set optimal camera distance for each layout type
-    let optimalDistance;
-    switch (layout) {
-      case 'table':
-        optimalDistance = 3000; // Good distance for table view
-        break;
-      case 'sphere':
-        optimalDistance = 2500; // Closer for sphere
-        break;
-      case 'helix':
-        optimalDistance = 2800; // Good for helix
-        break;
-      case 'grid':
-        optimalDistance = 2000; // Not used for grid (fixed position)
-        break;
-      case 'tetrahedron':
-        optimalDistance = 2700; // Good distance for pyramid view
-        break;
-      default:
-        optimalDistance = 3000;
+    // Configure controls based on layout
+    if (controls) {
+      if (layout === 'grid') {
+        // Grid layout: Disable all controls
+        controls.enabled = false;
+      } else {
+        // Other layouts: Enable drag-based controls
+        controls.enabled = true;
+        controls.enableRotate = true;
+        controls.enablePan = false;
+        controls.enableZoom = true;
+        
+        // Set optimal camera distance for each layout type
+        let optimalDistance;
+        switch (layout) {
+          case 'table':
+            optimalDistance = 3000;
+            break;
+          case 'sphere':
+            optimalDistance = 2500;
+            break;
+          case 'helix':
+            optimalDistance = 2800;
+            break;
+          case 'tetrahedron':
+            optimalDistance = 2700;
+            break;
+          default:
+            optimalDistance = 3000;
+        }
+        
+        // Set camera distance via controls
+        const camera = cameraRef.current;
+        if (camera) {
+          const direction = new THREE.Vector3();
+          camera.getWorldDirection(direction);
+          direction.multiplyScalar(-optimalDistance);
+          camera.position.copy(direction);
+          controls.update();
+        }
+      }
     }
-    setCameraDistance(optimalDistance);
 
     const duration = 2000;
     const startTime = Date.now();
@@ -409,55 +432,9 @@ export function DataVisualization({ data, layout }: DataVisualizationProps) {
     return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
   };
 
-  const handleMouseMove = (event: React.MouseEvent) => {
-    // Only allow mouse rotation for non-grid layouts
-    if (isGridLayout) {
-      return; // Grid layout has completely locked camera
-    }
-    
-    // EXTREMELY controlled rotation - no direct object updates
-    const normalizedX = ((event.clientX / window.innerWidth) - 0.5);
-    
-    // Very limited range and low sensitivity to prevent scattering
-    const clampedRotation = Math.max(-0.3, Math.min(0.3, normalizedX)) * 0.5; // Much smaller range
-    
-    // Only update target rotation - actual rotation is interpolated in render loop
-    // This prevents direct object manipulation during mouse events
-    setTargetRotation(clampedRotation);
-  };
-
-  const handleWheel = (event: React.WheelEvent) => {
-    // Smooth zoom control with mouse wheel
-    event.preventDefault();
-    
-    if (isGridLayout) {
-      // Grid layout: Allow zoom but with different range
-      const zoomSpeed = 50;
-      const minDistance = 1000; // Closer for grid
-      const maxDistance = 3000; // Not too far for grid
-      
-      setCameraDistance(prevDistance => {
-        const newDistance = prevDistance + (event.deltaY > 0 ? zoomSpeed : -zoomSpeed);
-        return Math.max(minDistance, Math.min(maxDistance, newDistance));
-      });
-    } else {
-      // Other layouts: Normal zoom
-      const zoomSpeed = 100;
-      const minDistance = 1500; // Closest zoom
-      const maxDistance = 5000; // Farthest zoom
-      
-      setCameraDistance(prevDistance => {
-        const newDistance = prevDistance + (event.deltaY > 0 ? zoomSpeed : -zoomSpeed);
-        return Math.max(minDistance, Math.min(maxDistance, newDistance));
-      });
-    }
-  };
-
   return (
     <div
       ref={containerRef}
-      onMouseMove={handleMouseMove}
-      onWheel={handleWheel}
       style={{
         width: '100%',
         height: '100%',
