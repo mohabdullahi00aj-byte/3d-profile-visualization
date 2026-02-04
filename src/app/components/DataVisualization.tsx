@@ -30,12 +30,6 @@ export function DataVisualization({ data, layout }: DataVisualizationProps) {
     tetrahedron: [],
   });
 
-  // Render function accessible to controls change event
-  const render = () => {
-    if (!cameraRef.current || !rendererRef.current || !sceneRef.current) return;
-    rendererRef.current.render(sceneRef.current, cameraRef.current);
-  };
-
   useEffect(() => {
     if (!containerRef.current) return;
     
@@ -65,6 +59,13 @@ export function DataVisualization({ data, layout }: DataVisualizationProps) {
     const controls = new TrackballControls(camera, renderer.domElement);
     controls.minDistance = 500;
     controls.maxDistance = 6000;
+    
+    // Render function exactly like sample code
+    const render = () => {
+      renderer.render(scene, camera);
+    };
+    
+    // Add change event listener exactly like sample code
     controls.addEventListener('change', render);
     controlsRef.current = controls;
 
@@ -304,19 +305,14 @@ export function DataVisualization({ data, layout }: DataVisualizationProps) {
       controls.update();
     };
 
-    const render = () => {
-      if (!cameraRef.current || !rendererRef.current || !sceneRef.current) return;
-      renderer.render(scene, camera);
-    };
-
     animate();
 
-    // Handle window resize
+    // Handle window resize exactly like sample code
     const handleResize = () => {
-      if (!cameraRef.current || !rendererRef.current) return;
       camera.aspect = window.innerWidth / window.innerHeight;
       camera.updateProjectionMatrix();
       renderer.setSize(window.innerWidth, window.innerHeight);
+      render(); // Call render after resize like sample code
     };
 
     window.addEventListener('resize', handleResize);
