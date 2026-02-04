@@ -298,14 +298,18 @@ export function DataVisualization({ data, layout }: DataVisualizationProps) {
     objectsRef.current = objects;
     targetsRef.current = { table, sphere, helix, grid, tetrahedron };
 
-    // Animation loop exactly like the sample code
+    // Animation loop exactly like the sample code with TWEEN
     let animationId: number;
     const animate = () => {
       animationId = requestAnimationFrame(animate);
+      // TWEEN.update(); // We'll handle this differently in React
       controls.update();
     };
 
     animate();
+
+    // Start with table view like sample code
+    // We'll handle the initial transform in the layout effect
 
     // Handle window resize exactly like sample code
     const handleResize = () => {
@@ -329,39 +333,61 @@ export function DataVisualization({ data, layout }: DataVisualizationProps) {
     };
   }, [data]); // Remove currentRotation dependency
 
-  // Transform to layout
+  // Transform to layout exactly like sample code
   useEffect(() => {
     const targets = targetsRef.current[layout];
     const objects = objectsRef.current;
 
+    if (objects.length === 0 || targets.length === 0) return;
+
+    // Transform function exactly like sample code
     const duration = 2000;
-    const startTime = Date.now();
+    
+    // Clear any existing animations
+    objects.forEach((object, i) => {
+      if (targets[i]) {
+        // Smooth transition to target position
+        const startPos = {
+          x: object.position.x,
+          y: object.position.y,
+          z: object.position.z
+        };
+        
+        const targetPos = {
+          x: targets[i].position.x,
+          y: targets[i].position.y,
+          z: targets[i].position.z
+        };
 
-    const initialPositions = objects.map((obj) => ({
-      x: obj.position.x,
-      y: obj.position.y,
-      z: obj.position.z,
-    }));
+        // Use requestAnimationFrame for smooth animation like TWEEN
+        const startTime = Date.now();
+        const animateTransition = () => {
+          const elapsed = Date.now() - startTime;
+          const progress = Math.min(elapsed / (duration + Math.random() * duration), 1);
+          
+          // Exponential easing like sample code
+          const eased = progress < 0.5 
+            ? 4 * progress * progress * progress 
+            : 1 - Math.pow(-2 * progress + 2, 3) / 2;
 
-    const animate = () => {
-      const elapsed = Date.now() - startTime;
-      const progress = Math.min(elapsed / duration, 1);
-      const eased = easeInOutCubic(progress);
+          object.position.x = startPos.x + (targetPos.x - startPos.x) * eased;
+          object.position.y = startPos.y + (targetPos.y - startPos.y) * eased;
+          object.position.z = startPos.z + (targetPos.z - startPos.z) * eased;
 
-      objects.forEach((obj, i) => {
-        if (targets[i]) {
-          obj.position.x = initialPositions[i].x + (targets[i].position.x - initialPositions[i].x) * eased;
-          obj.position.y = initialPositions[i].y + (targets[i].position.y - initialPositions[i].y) * eased;
-          obj.position.z = initialPositions[i].z + (targets[i].position.z - initialPositions[i].z) * eased;
-        }
-      });
+          // Call render during animation like sample code onUpdate(render)
+          if (rendererRef.current && sceneRef.current && cameraRef.current) {
+            rendererRef.current.render(sceneRef.current, cameraRef.current);
+          }
 
-      if (progress < 1) {
-        requestAnimationFrame(animate);
+          if (progress < 1) {
+            requestAnimationFrame(animateTransition);
+          }
+        };
+
+        // Start animation with random delay like sample code
+        setTimeout(animateTransition, Math.random() * 200);
       }
-    };
-
-    animate();
+    });
   }, [layout]);
 
   const easeInOutCubic = (t: number): number => {
