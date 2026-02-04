@@ -125,7 +125,7 @@ function App() {
     <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
       <div className="relative w-screen h-screen overflow-hidden">
         {/* Controls overlay */}
-        <div className="absolute top-0 left-0 right-0 z-10 bg-gradient-to-b from-black/80 to-transparent p-6">
+        <div className="absolute top-0 left-0 right-0 z-10 bg-gradient-to-b from-black/80 to-transparent p-6 pointer-events-none">
           <div className="flex items-center justify-between max-w-7xl mx-auto">
             <div className="flex items-center gap-4">
               <h1 className="text-2xl font-bold text-white">3D Data Explorer</h1>
@@ -141,7 +141,7 @@ function App() {
             
             <button
               onClick={handleLogout}
-              className="flex items-center gap-2 bg-red-500/80 hover:bg-red-600 text-white px-4 py-2 rounded-lg transition-colors"
+              className="flex items-center gap-2 bg-red-500/80 hover:bg-red-600 text-white px-4 py-2 rounded-lg transition-colors pointer-events-auto"
             >
               <LogOut size={18} />
               Logout
@@ -150,7 +150,7 @@ function App() {
         </div>
 
         {/* Layout controls */}
-        <div className="absolute top-24 left-6 z-10 bg-white/10 backdrop-blur-lg rounded-2xl p-4 shadow-xl border border-white/20">
+        <div className="absolute top-24 left-6 z-10 bg-white/10 backdrop-blur-lg rounded-2xl p-4 shadow-xl border border-white/20 pointer-events-auto">
           <h3 className="text-white font-semibold mb-3 text-sm">Layout</h3>
           <div className="flex flex-col gap-2">
             <button
@@ -207,7 +207,7 @@ function App() {
         </div>
 
         {/* Legend */}
-        <div className="absolute top-24 right-6 z-10 bg-white/10 backdrop-blur-lg rounded-2xl p-4 shadow-xl border border-white/20">
+        <div className="absolute top-24 right-6 z-10 bg-white/10 backdrop-blur-lg rounded-2xl p-4 shadow-xl border border-white/20 pointer-events-auto">
           <h3 className="text-white font-semibold mb-3 text-sm">Net Worth</h3>
           <div className="flex flex-col gap-2">
             <div className="flex items-center gap-2">
@@ -226,7 +226,7 @@ function App() {
         </div>
 
         {/* Info */}
-        <div className="absolute bottom-6 left-6 z-10 bg-white/10 backdrop-blur-lg rounded-2xl px-4 py-3 shadow-xl border border-white/20">
+        <div className="absolute bottom-6 left-6 z-10 bg-white/10 backdrop-blur-lg rounded-2xl px-4 py-3 shadow-xl border border-white/20 pointer-events-auto">
           <p className="text-white text-sm">
             {loading ? 'Loading data...' : `Displaying ${data.length} records`}
           </p>
