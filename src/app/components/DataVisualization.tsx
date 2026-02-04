@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import { CSS3DRenderer, CSS3DObject } from 'three/addons/renderers/CSS3DRenderer.js';
-import { TrackballControls } from 'three/addons/controls/TrackballControls.js';
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 import * as TWEEN from '@tweenjs/tween.js';
 import { PersonData, getNetWorthColor, formatNetWorth } from '@/app/utils/googleSheets';
 
@@ -15,7 +15,7 @@ export function DataVisualization({ data, layout }: DataVisualizationProps) {
   const sceneRef = useRef<THREE.Scene | null>(null);
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
   const rendererRef = useRef<CSS3DRenderer | null>(null);
-  const controlsRef = useRef<TrackballControls | null>(null);
+  const controlsRef = useRef<OrbitControls | null>(null);
   const objectsRef = useRef<CSS3DObject[]>([]);
   const targetsRef = useRef<{
     table: THREE.Object3D[];
@@ -56,19 +56,15 @@ export function DataVisualization({ data, layout }: DataVisualizationProps) {
     containerRef.current.appendChild(renderer.domElement);
     rendererRef.current = renderer;
 
-    // Controls - exactly like official example
-    const controls = new TrackballControls(camera, renderer.domElement);
-    controls.minDistance = 500;
-    controls.maxDistance = 6000;
+    // Controls - TypeScript-safe OrbitControls
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableRotate = true;        // drag only
+    controls.enablePan = false;          // prevents layout shift illusion
+    controls.enableZoom = true;
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.08;
+    controls.rotateSpeed = 0.6;
     controlsRef.current = controls;
-
-    // Render function
-    const render = () => {
-      renderer.render(scene, camera);
-    };
-
-    // Add change listener
-    controls.addEventListener('change', render);
 
     // Create objects
     const objects: CSS3DObject[] = [];
@@ -205,18 +201,8 @@ export function DataVisualization({ data, layout }: DataVisualizationProps) {
       `;
       element.appendChild(netWorth);
 
-      // Hover effect
-      element.addEventListener('mouseenter', () => {
-        element.style.boxShadow = '0px 0px 25px rgba(0, 255, 255, 0.8)';
-        element.style.transform = 'scale(1.05)';
-        element.style.zIndex = '100';
-      });
-
-      element.addEventListener('mouseleave', () => {
-        element.style.boxShadow = '0px 0px 12px rgba(0,255,255,0.5)';
-        element.style.transform = 'scale(1)';
-        element.style.zIndex = 'auto';
-      });
+      // Remove hover effects - let OrbitControls handle all interaction
+      // No mouse event handlers needed
 
       // CSS3D Object
       const objectCSS = new CSS3DObject(element);
@@ -314,12 +300,13 @@ export function DataVisualization({ data, layout }: DataVisualizationProps) {
     objectsRef.current = objects;
     targetsRef.current = { table, sphere, helix, grid, tetrahedron };
 
-    // Animation loop - exactly like official example
+    // Animation loop - ONLY camera movement happens here
     let animationId: number;
     const animate = () => {
       animationId = requestAnimationFrame(animate);
       TWEEN.update();
-      controls.update();
+      controls.update(); // ← ONLY camera movement happens here
+      renderer.render(scene, camera);
     };
     animate();
 
@@ -328,18 +315,16 @@ export function DataVisualization({ data, layout }: DataVisualizationProps) {
       camera.aspect = window.innerWidth / window.innerHeight;
       camera.updateProjectionMatrix();
       renderer.setSize(window.innerWidth, window.innerHeight);
-      render();
     };
     window.addEventListener('resize', onWindowResize);
 
     // Initial render
-    render();
+    renderer.render(scene, camera);
 
     return () => {
       cancelAnimationFrame(animationId);
       window.removeEventListener('resize', onWindowResize);
       if (controls) {
-        controls.removeEventListener('change', render);
         controls.dispose();
       }
       if (containerRef.current && renderer.domElement) {
@@ -386,6 +371,7 @@ export function DataVisualization({ data, layout }: DataVisualizationProps) {
     new TWEEN.Tween({})
       .to({}, duration * 2)
       .onUpdate(() => {
+        // Render during animation
         if (rendererRef.current && sceneRef.current && cameraRef.current) {
           rendererRef.current.render(sceneRef.current, cameraRef.current);
         }
