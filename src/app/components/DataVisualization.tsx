@@ -298,23 +298,23 @@ export function DataVisualization({ data, layout }: DataVisualizationProps) {
 
       if (isGridLayout) {
         // GRID LAYOUT: Fixed camera position - no rotation allowed
-        // Matches Image C with angled view and layered appearance
         camera.position.set(1200, 800, 1600);
         camera.lookAt(0, 0, 0);
       } else {
-        // OTHER LAYOUTS: Controlled horizontal rotation only
-        const horizontalRotation = mouseX * 0.0005; // Very low sensitivity
+        // OTHER LAYOUTS: SMOOTH controlled horizontal rotation only
+        // Reduced sensitivity and smoother interpolation to prevent scattering appearance
+        const targetRotation = mouseX * 0.0002; // Much lower sensitivity (reduced from 0.0005)
         const radius = cameraDistance;
         
-        // Camera orbits horizontally around the scene center
-        camera.position.x = Math.sin(horizontalRotation) * radius;
-        camera.position.z = Math.cos(horizontalRotation) * radius;
+        // Smooth camera orbit - horizontal only, no vertical movement
+        camera.position.x = Math.sin(targetRotation) * radius;
+        camera.position.z = Math.cos(targetRotation) * radius;
         
-        // Keep camera height FIXED to prevent table tilting
+        // Lock camera height to prevent any vertical movement or tilting
         camera.position.y = 0;
         
-        // Always look at scene center for stable perspective
-        camera.lookAt(scene.position);
+        // Always look at scene center (0,0,0) for stable perspective
+        camera.lookAt(0, 0, 0);
       }
       
       renderer.render(scene, camera);
@@ -412,13 +412,19 @@ export function DataVisualization({ data, layout }: DataVisualizationProps) {
       return; // Grid layout has locked camera - no mouse interaction
     }
     
-    // Controlled horizontal rotation only - prevents perspective distortion
+    // SMOOTH controlled horizontal rotation - prevents data scattering appearance
     const normalizedX = ((event.clientX / window.innerWidth) - 0.5) * 2;
     
-    // Only track horizontal movement, ignore vertical to prevent tilting
-    // Clamp rotation to reasonable range (-1 to 1)
-    setMouseX(Math.max(-1, Math.min(1, normalizedX)));
-    // mouseY is not updated - no vertical rotation
+    // Clamp to smaller range and use smoother updates to prevent jittery movement
+    const clampedX = Math.max(-0.8, Math.min(0.8, normalizedX)); // Reduced range
+    
+    // Only update if there's a significant change to reduce jitter
+    const threshold = 0.01;
+    if (Math.abs(clampedX - mouseX) > threshold) {
+      setMouseX(clampedX);
+    }
+    
+    // mouseY is never updated - strictly horizontal rotation only
   };
 
   const handleWheel = (event: React.WheelEvent) => {
