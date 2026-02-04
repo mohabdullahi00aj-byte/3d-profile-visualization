@@ -30,6 +30,12 @@ export function DataVisualization({ data, layout }: DataVisualizationProps) {
     tetrahedron: [],
   });
 
+  // Render function accessible to controls change event
+  const render = () => {
+    if (!cameraRef.current || !rendererRef.current || !sceneRef.current) return;
+    rendererRef.current.render(sceneRef.current, cameraRef.current);
+  };
+
   useEffect(() => {
     if (!containerRef.current) return;
     
@@ -55,16 +61,11 @@ export function DataVisualization({ data, layout }: DataVisualizationProps) {
     containerRef.current.appendChild(renderer.domElement);
     rendererRef.current = renderer;
 
-    // Initialize TrackballControls for stable camera movement
+    // Initialize TrackballControls exactly like the sample code
     const controls = new TrackballControls(camera, renderer.domElement);
-    controls.rotateSpeed = 1.0;
-    controls.zoomSpeed = 1.2;
-    controls.panSpeed = 0.8;
-    controls.noZoom = false;
-    controls.noPan = false;
-    controls.staticMoving = true;
-    controls.dynamicDampingFactor = 0.3;
-    controls.keys = ['KeyA', 'KeyS', 'KeyD'];
+    controls.minDistance = 500;
+    controls.maxDistance = 6000;
+    controls.addEventListener('change', render);
     controlsRef.current = controls;
 
     // Create objects for each data item
@@ -296,19 +297,15 @@ export function DataVisualization({ data, layout }: DataVisualizationProps) {
     objectsRef.current = objects;
     targetsRef.current = { table, sphere, helix, grid, tetrahedron };
 
-    // Animation loop
+    // Animation loop exactly like the sample code
     let animationId: number;
     const animate = () => {
       animationId = requestAnimationFrame(animate);
-      render();
+      controls.update();
     };
 
     const render = () => {
-      if (!cameraRef.current || !rendererRef.current || !sceneRef.current || !controlsRef.current) return;
-
-      // Update TrackballControls - this handles all camera movement
-      controlsRef.current.update();
-      
+      if (!cameraRef.current || !rendererRef.current || !sceneRef.current) return;
       renderer.render(scene, camera);
     };
 
