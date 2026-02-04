@@ -82,19 +82,21 @@ export function DataVisualization({ data, layout }: DataVisualizationProps) {
       element.style.overflow = 'hidden';
 
       // Profile image (if available from CSV Photo column)
-      const photoUrl = visualData[i].photo || ''; // Get photo URL from CSV data
-      if (photoUrl) {
+      const photoUrl = person.photo || ''; // Get photo URL from person data
+      
+      if (photoUrl && photoUrl.trim() !== '') {
         const profileImage = document.createElement('img');
         profileImage.src = photoUrl;
         profileImage.style.position = 'absolute';
-        profileImage.style.top = '8px';
-        profileImage.style.left = '8px';
-        profileImage.style.width = '40px';
-        profileImage.style.height = '40px';
-        profileImage.style.borderRadius = '4px';
+        profileImage.style.top = '6px';
+        profileImage.style.left = '6px';
+        profileImage.style.width = '36px';
+        profileImage.style.height = '36px';
+        profileImage.style.borderRadius = '3px';
         profileImage.style.objectFit = 'cover';
-        profileImage.style.border = '1px solid rgba(255,255,255,0.3)';
-        profileImage.style.backgroundColor = 'rgba(0,0,0,0.2)';
+        profileImage.style.border = '2px solid rgba(255,255,255,0.8)';
+        profileImage.style.backgroundColor = 'rgba(0,0,0,0.1)';
+        profileImage.style.zIndex = '10';
         
         // Handle image load errors gracefully
         profileImage.onerror = () => {
