@@ -205,32 +205,30 @@ export function DataVisualization({ data, layout }: DataVisualizationProps) {
       gridObject.position.z = (Math.floor(i / 50) - 2) * 180;  // Much tighter Z spacing
       grid.push(gridObject);
 
-      // Tetrahedron layout - TRUE 4-face geometric tetrahedron
+      // Tetrahedron layout (4-face pyramid) - LARGE and BOLD design
       const tetrahedronObject = new THREE.Object3D();
       
       // Calculate which face this item belongs to (4 faces total)
       const faceIndex = Math.floor(i / 50); // 50 items per face (200/4)
       const itemInFace = i % 50;
       
-      // True tetrahedron vertices - large and clearly visible
-      // Based on regular tetrahedron geometry with proper proportions
-      const size = 700; // Large size for clear visibility
-      const height = size * Math.sqrt(2/3) * 1.2; // ~683 units (slightly taller)
-      const radius = size / Math.sqrt(3); // ~404 units
+      // Large tetrahedron vertices - BIGGER and more visible
+      const scale = 800; // Much larger scale for bold appearance
+      const height = scale * 0.8; // 640 units height
+      const baseRadius = scale * 0.7; // 560 units base radius
       
-      // Four vertices of a regular tetrahedron
       const vertices = [
-        new THREE.Vector3(0, height * 0.6, 0),                    // Top apex
-        new THREE.Vector3(-radius, -height * 0.4, radius * 0.6),  // Base vertex 1 (front-left)
-        new THREE.Vector3(radius, -height * 0.4, radius * 0.6),   // Base vertex 2 (front-right)
-        new THREE.Vector3(0, -height * 0.4, -radius * 1.2)        // Base vertex 3 (back)
+        new THREE.Vector3(0, height, 0),                           // Top apex - high up
+        new THREE.Vector3(-baseRadius, -height * 0.3, baseRadius * 0.6),  // Base vertex 1
+        new THREE.Vector3(baseRadius, -height * 0.3, baseRadius * 0.6),   // Base vertex 2
+        new THREE.Vector3(0, -height * 0.3, -baseRadius * 1.2)           // Base vertex 3 - further back
       ];
       
-      // Four triangular faces of the tetrahedron
+      // Define the 4 triangular faces - WIDE and FLAT
       const faces = [
-        [0, 1, 2], // Front face (apex to front base edge)
-        [0, 2, 3], // Right face (apex to right base edge)
-        [0, 3, 1], // Left face (apex to left base edge)
+        [0, 1, 2], // Front face (apex to base edge 1-2)
+        [0, 2, 3], // Right face (apex to base edge 2-3)
+        [0, 3, 1], // Left face (apex to base edge 3-1)
         [1, 2, 3]  // Bottom face (base triangle)
       ];
       
@@ -240,47 +238,45 @@ export function DataVisualization({ data, layout }: DataVisualizationProps) {
         const v2 = vertices[face[1]];
         const v3 = vertices[face[2]];
         
-        // Distribute cards evenly across the triangular face
-        const itemsPerFace = 50;
-        const gridDim = Math.ceil(Math.sqrt(itemsPerFace)); // ~8x8 grid
-        const row = Math.floor(itemInFace / gridDim);
-        const col = itemInFace % gridDim;
+        // Simple grid distribution for clear, spread-out arrangement
+        const gridSize = Math.ceil(Math.sqrt(50)); // ~7x7 grid
+        const row = Math.floor(itemInFace / gridSize);
+        const col = itemInFace % gridSize;
         
-        // Create triangular distribution pattern
-        const maxRow = gridDim - 1;
-        const maxColInRow = Math.max(1, gridDim - Math.floor(row * 0.7));
+        // Create triangular mask - only show items in triangular area
+        const maxColsInRow = Math.max(1, gridSize - Math.floor(row * 0.8));
         
-        if (row <= maxRow && col < maxColInRow) {
-          // Barycentric coordinates for triangular face positioning
-          const u = row / maxRow;                    // Position along one edge
-          const v = col / maxColInRow;               // Position along another edge
-          const w = 1 - u - v;                      // Remaining weight
+        if (col < maxColsInRow) {
+          // Barycentric coordinates for positioning on triangular face
+          const u = (row + 0.5) / gridSize;
+          const v = (col + 0.5) / maxColsInRow;
+          const w = 1 - u - v;
           
-          // Normalize to ensure valid barycentric coordinates
-          const sum = Math.max(0.01, u + v + w);
-          const normU = u / sum;
-          const normV = v / sum;
-          const normW = w / sum;
+          // Ensure valid coordinates
+          const total = Math.max(0.1, u + v + w);
+          const normalizedU = Math.max(0, u / total);
+          const normalizedV = Math.max(0, v / total);
+          const normalizedW = Math.max(0, w / total);
           
-          // Position on the triangular face (no shrinking - use full face)
-          tetrahedronObject.position.x = v1.x * normW + v2.x * normU + v3.x * normV;
-          tetrahedronObject.position.y = v1.y * normW + v2.y * normU + v3.y * normV;
-          tetrahedronObject.position.z = v1.z * normW + v2.z * normU + v3.z * normV;
+          // Position on face with NO shrinking - use full face area
+          tetrahedronObject.position.x = v1.x * normalizedW + v2.x * normalizedU + v3.x * normalizedV;
+          tetrahedronObject.position.y = v1.y * normalizedW + v2.y * normalizedU + v3.y * normalizedV;
+          tetrahedronObject.position.z = v1.z * normalizedW + v2.z * normalizedU + v3.z * normalizedV;
         } else {
-          // Place remaining items near the face center with slight offset
+          // Place extra items near face center with slight spread
           const centerX = (v1.x + v2.x + v3.x) / 3;
           const centerY = (v1.y + v2.y + v3.y) / 3;
           const centerZ = (v1.z + v2.z + v3.z) / 3;
           
-          // Small random offset to prevent exact overlap
-          const offset = 60;
-          const randX = (Math.random() - 0.5) * offset;
-          const randY = (Math.random() - 0.5) * offset;
-          const randZ = (Math.random() - 0.5) * offset;
+          // Small random spread to avoid exact overlap
+          const spread = 80;
+          const offsetX = (Math.random() - 0.5) * spread;
+          const offsetY = (Math.random() - 0.5) * spread;
+          const offsetZ = (Math.random() - 0.5) * spread;
           
-          tetrahedronObject.position.x = centerX + randX;
-          tetrahedronObject.position.y = centerY + randY;
-          tetrahedronObject.position.z = centerZ + randZ;
+          tetrahedronObject.position.x = centerX + offsetX;
+          tetrahedronObject.position.y = centerY + offsetY;
+          tetrahedronObject.position.z = centerZ + offsetZ;
         }
       }
       
