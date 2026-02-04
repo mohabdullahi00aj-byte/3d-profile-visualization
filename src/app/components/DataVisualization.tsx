@@ -169,27 +169,29 @@ export function DataVisualization({ data, layout }: DataVisualizationProps) {
       gridObject.position.z = (Math.floor(i / 50) - 2) * 180;  // Much tighter Z spacing
       grid.push(gridObject);
 
-      // Tetrahedron layout (4-face pyramid)
+      // Tetrahedron layout (4-face pyramid) - REFINED for clearer pyramid shape
       const tetrahedronObject = new THREE.Object3D();
       
       // Calculate which face this item belongs to (4 faces total)
       const faceIndex = Math.floor(i / 50); // 50 items per face (200/4)
       const itemInFace = i % 50;
       
-      // Tetrahedron vertices (4 points of pyramid)
+      // Tetrahedron vertices - positioned for clear pyramid visibility
+      const height = 500;
+      const baseRadius = 450;
       const vertices = [
-        new THREE.Vector3(0, 400, 0),      // Top vertex
-        new THREE.Vector3(-400, -200, 400), // Front-left base
-        new THREE.Vector3(400, -200, 400),  // Front-right base
-        new THREE.Vector3(0, -200, -400)    // Back base
+        new THREE.Vector3(0, height, 0),                    // Top apex
+        new THREE.Vector3(-baseRadius, -height/2, baseRadius/2),  // Base vertex 1
+        new THREE.Vector3(baseRadius, -height/2, baseRadius/2),   // Base vertex 2
+        new THREE.Vector3(0, -height/2, -baseRadius)             // Base vertex 3
       ];
       
-      // Define the 4 triangular faces
+      // Define the 4 triangular faces with better separation
       const faces = [
-        [0, 1, 2], // Top-front face
-        [0, 2, 3], // Top-right face  
-        [0, 3, 1], // Top-left face
-        [1, 2, 3]  // Bottom face
+        [0, 1, 2], // Front face (apex to base edge 1-2)
+        [0, 2, 3], // Right face (apex to base edge 2-3)
+        [0, 3, 1], // Left face (apex to base edge 3-1)
+        [1, 2, 3]  // Bottom face (base triangle)
       ];
       
       if (faceIndex < 4) {
@@ -198,27 +200,43 @@ export function DataVisualization({ data, layout }: DataVisualizationProps) {
         const v2 = vertices[face[1]];
         const v3 = vertices[face[2]];
         
-        // Distribute items in triangular pattern on this face
-        const rows = Math.ceil(Math.sqrt(50)); // ~7 rows
-        const row = Math.floor(itemInFace / rows);
-        const col = itemInFace % rows;
-        const maxCols = rows - Math.floor(row * 0.5); // Triangular distribution
+        // Create triangular grid pattern for even distribution
+        const itemsPerRow = Math.ceil(Math.sqrt(50 * 2)); // ~10 items per row max
+        const row = Math.floor(itemInFace / itemsPerRow);
+        const col = itemInFace % itemsPerRow;
         
-        if (col < maxCols) {
-          // Barycentric coordinates for triangular distribution
-          const u = (row + 1) / (rows + 1);
-          const v = (col + 1) / (maxCols + 1);
-          const w = 1 - u - v;
+        // Triangular distribution - fewer items in higher rows
+        const maxRows = Math.ceil(Math.sqrt(50));
+        const itemsInThisRow = Math.max(1, itemsPerRow - Math.floor(row * 1.5));
+        
+        if (row < maxRows && col < itemsInThisRow) {
+          // Barycentric coordinates for triangular face positioning
+          const u = (row + 0.5) / maxRows;
+          const v = (col + 0.5) / itemsInThisRow;
+          const w = Math.max(0, 1 - u - v);
           
-          // Position on triangle face
-          tetrahedronObject.position.x = v1.x * w + v2.x * u + v3.x * v;
-          tetrahedronObject.position.y = v1.y * w + v2.y * u + v3.y * v;
-          tetrahedronObject.position.z = v1.z * w + v2.z * u + v3.z * v;
+          // Normalize barycentric coordinates
+          const total = u + v + w;
+          const normalizedU = u / total;
+          const normalizedV = v / total;
+          const normalizedW = w / total;
+          
+          // Position on triangle face with slight inward offset for clarity
+          const offsetFactor = 0.85; // Slightly smaller to show face separation
+          tetrahedronObject.position.x = (v1.x * normalizedW + v2.x * normalizedU + v3.x * normalizedV) * offsetFactor;
+          tetrahedronObject.position.y = (v1.y * normalizedW + v2.y * normalizedU + v3.y * normalizedV) * offsetFactor;
+          tetrahedronObject.position.z = (v1.z * normalizedW + v2.z * normalizedU + v3.z * normalizedV) * offsetFactor;
         } else {
-          // Fallback for extra items - place near face center
-          tetrahedronObject.position.x = (v1.x + v2.x + v3.x) / 3;
-          tetrahedronObject.position.y = (v1.y + v2.y + v3.y) / 3;
-          tetrahedronObject.position.z = (v1.z + v2.z + v3.z) / 3;
+          // Fallback positioning for remaining items - place near face center
+          const centerX = (v1.x + v2.x + v3.x) / 3;
+          const centerY = (v1.y + v2.y + v3.y) / 3;
+          const centerZ = (v1.z + v2.z + v3.z) / 3;
+          
+          // Add small random offset to avoid overlap
+          const offset = (itemInFace % 10) * 20 - 100;
+          tetrahedronObject.position.x = centerX + offset;
+          tetrahedronObject.position.y = centerY + offset * 0.5;
+          tetrahedronObject.position.z = centerZ + offset * 0.3;
         }
       }
       
