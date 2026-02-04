@@ -3,6 +3,7 @@ export interface PersonData {
   age: number;
   occupation: string;
   netWorth: number;
+  photo?: string; // Optional photo URL
 }
 
 export async function fetchGoogleSheetData(): Promise<PersonData[]> {
@@ -47,6 +48,7 @@ function parseCSV(csvText: string): PersonData[] {
     if (values.length >= 6) {
       // CSV structure: Name, Photo, Age, Country, Interest, Net Worth
       const name = values[0] || `Person ${i}`;
+      const photoUrl = values[1] || ''; // Photo URL from CSV
       const age = parseInt(values[2]) || 0;
       const country = values[3] || 'Unknown'; // Using country as occupation for now
       const netWorthString = values[5] || '0'; // Net Worth is in column 5
@@ -60,6 +62,7 @@ function parseCSV(csvText: string): PersonData[] {
         age: age,
         occupation: country, // Using country as occupation since there's no occupation column
         netWorth: netWorth,
+        photo: photoUrl, // Add photo URL to person data
       };
       
       // Debug logging for first few records
@@ -139,6 +142,7 @@ function generateMockData(): PersonData[] {
       age: Math.floor(Math.random() * 40) + 25,
       occupation: occupations[i % occupations.length],
       netWorth: Math.round(netWorth),
+      photo: `https://static.kasatria.com/pivot-img/photo/${String(i + 1).padStart(3, '0')}.jpg`, // Mock photo URLs
     });
   }
   

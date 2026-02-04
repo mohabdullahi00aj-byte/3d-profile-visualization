@@ -78,45 +78,79 @@ export function DataVisualization({ data, layout }: DataVisualizationProps) {
       element.style.textAlign = 'center';
       element.style.cursor = 'default';
       element.style.backgroundColor = getNetWorthColor(person.netWorth);
+      element.style.position = 'relative';
+      element.style.overflow = 'hidden';
+
+      // Profile image (if available from CSV Photo column)
+      const photoUrl = visualData[i].photo || ''; // Get photo URL from CSV data
+      if (photoUrl) {
+        const profileImage = document.createElement('img');
+        profileImage.src = photoUrl;
+        profileImage.style.position = 'absolute';
+        profileImage.style.top = '8px';
+        profileImage.style.left = '8px';
+        profileImage.style.width = '40px';
+        profileImage.style.height = '40px';
+        profileImage.style.borderRadius = '4px';
+        profileImage.style.objectFit = 'cover';
+        profileImage.style.border = '1px solid rgba(255,255,255,0.3)';
+        profileImage.style.backgroundColor = 'rgba(0,0,0,0.2)';
+        
+        // Handle image load errors gracefully
+        profileImage.onerror = () => {
+          profileImage.style.display = 'none';
+        };
+        
+        element.appendChild(profileImage);
+      }
 
       const number = document.createElement('div');
       number.className = 'number';
       number.textContent = String(i + 1);
       number.style.position = 'absolute';
-      number.style.top = '20px';
-      number.style.right = '20px';
-      number.style.fontSize = '12px';
+      number.style.top = '8px';
+      number.style.right = '8px';
+      number.style.fontSize = '10px';
       number.style.color = 'rgba(255,255,255,0.5)';
+      number.style.fontWeight = 'bold';
       element.appendChild(number);
 
       const name = document.createElement('div');
       name.className = 'name';
       name.textContent = person.name;
       name.style.position = 'absolute';
-      name.style.top = '40px';
+      name.style.top = '52px'; // Moved down to accommodate profile image
       name.style.width = '100%';
-      name.style.fontSize = '18px';
+      name.style.fontSize = '16px'; // Slightly smaller to fit better
       name.style.fontWeight = 'bold';
       name.style.color = 'rgba(255,255,255,0.95)';
+      name.style.padding = '0 4px';
+      name.style.overflow = 'hidden';
+      name.style.textOverflow = 'ellipsis';
+      name.style.whiteSpace = 'nowrap';
       element.appendChild(name);
 
       const occupation = document.createElement('div');
       occupation.className = 'occupation';
       occupation.textContent = person.occupation;
       occupation.style.position = 'absolute';
-      occupation.style.top = '70px';
+      occupation.style.top = '75px'; // Adjusted position
       occupation.style.width = '100%';
-      occupation.style.fontSize = '12px';
+      occupation.style.fontSize = '11px';
       occupation.style.color = 'rgba(255,255,255,0.75)';
+      occupation.style.padding = '0 4px';
+      occupation.style.overflow = 'hidden';
+      occupation.style.textOverflow = 'ellipsis';
+      occupation.style.whiteSpace = 'nowrap';
       element.appendChild(occupation);
 
       const age = document.createElement('div');
       age.className = 'age';
       age.textContent = `Age: ${person.age}`;
       age.style.position = 'absolute';
-      age.style.top = '95px';
+      age.style.top = '95px'; // Adjusted position
       age.style.width = '100%';
-      age.style.fontSize = '11px';
+      age.style.fontSize = '10px';
       age.style.color = 'rgba(255,255,255,0.7)';
       element.appendChild(age);
 
