@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { CSS3DRenderer, CSS3DObject } from 'three/addons/renderers/CSS3DRenderer.js';
 import { TrackballControls } from 'three/addons/controls/TrackballControls.js';
+import * as TWEEN from '@tweenjs/tween.js';
 import { PersonData, getNetWorthColor, formatNetWorth } from '@/app/utils/googleSheets';
 
 interface DataVisualizationProps {
@@ -298,17 +299,17 @@ export function DataVisualization({ data, layout }: DataVisualizationProps) {
     objectsRef.current = objects;
     targetsRef.current = { table, sphere, helix, grid, tetrahedron };
 
-    // Animation loop exactly like the sample code with TWEEN
+    // Animation loop exactly like Three.js periodic table example
     let animationId: number;
     const animate = () => {
       animationId = requestAnimationFrame(animate);
-      // TWEEN.update(); // We'll handle this differently in React
+      TWEEN.update(); // Essential for TWEEN animations
       controls.update();
     };
 
     animate();
 
-    // Start with table view like sample code
+    // Start with table view like the official example
     // We'll handle the initial transform in the layout effect
 
     // Handle window resize exactly like sample code
@@ -333,61 +334,55 @@ export function DataVisualization({ data, layout }: DataVisualizationProps) {
     };
   }, [data]); // Remove currentRotation dependency
 
-  // Transform to layout exactly like sample code
+  // Transform function exactly like Three.js periodic table example
   useEffect(() => {
     const targets = targetsRef.current[layout];
     const objects = objectsRef.current;
 
     if (objects.length === 0 || targets.length === 0) return;
 
-    // Transform function exactly like sample code
+    // Transform function exactly like the official Three.js example
     const duration = 2000;
     
-    // Clear any existing animations
-    objects.forEach((object, i) => {
-      if (targets[i]) {
-        // Smooth transition to target position
-        const startPos = {
-          x: object.position.x,
-          y: object.position.y,
-          z: object.position.z
-        };
-        
-        const targetPos = {
-          x: targets[i].position.x,
-          y: targets[i].position.y,
-          z: targets[i].position.z
-        };
+    // Remove all existing tweens
+    TWEEN.removeAll();
 
-        // Use requestAnimationFrame for smooth animation like TWEEN
-        const startTime = Date.now();
-        const animateTransition = () => {
-          const elapsed = Date.now() - startTime;
-          const progress = Math.min(elapsed / (duration + Math.random() * duration), 1);
-          
-          // Exponential easing like sample code
-          const eased = progress < 0.5 
-            ? 4 * progress * progress * progress 
-            : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+    for (let i = 0; i < objects.length; i++) {
+      const object = objects[i];
+      const target = targets[i];
 
-          object.position.x = startPos.x + (targetPos.x - startPos.x) * eased;
-          object.position.y = startPos.y + (targetPos.y - startPos.y) * eased;
-          object.position.z = startPos.z + (targetPos.z - startPos.z) * eased;
+      if (target) {
+        // Position tween exactly like the official example
+        new TWEEN.Tween(object.position)
+          .to({
+            x: target.position.x,
+            y: target.position.y,
+            z: target.position.z
+          }, Math.random() * duration + duration)
+          .easing(TWEEN.Easing.Exponential.InOut)
+          .start();
 
-          // Call render during animation like sample code onUpdate(render)
-          if (rendererRef.current && sceneRef.current && cameraRef.current) {
-            rendererRef.current.render(sceneRef.current, cameraRef.current);
-          }
-
-          if (progress < 1) {
-            requestAnimationFrame(animateTransition);
-          }
-        };
-
-        // Start animation with random delay like sample code
-        setTimeout(animateTransition, Math.random() * 200);
+        // Rotation tween exactly like the official example
+        new TWEEN.Tween(object.rotation)
+          .to({
+            x: target.rotation.x,
+            y: target.rotation.y,
+            z: target.rotation.z
+          }, Math.random() * duration + duration)
+          .easing(TWEEN.Easing.Exponential.InOut)
+          .start();
       }
-    });
+    }
+
+    // Master tween for render updates exactly like the official example
+    new TWEEN.Tween({})
+      .to({}, duration * 2)
+      .onUpdate(() => {
+        if (rendererRef.current && sceneRef.current && cameraRef.current) {
+          rendererRef.current.render(sceneRef.current, cameraRef.current);
+        }
+      })
+      .start();
   }, [layout]);
 
   const easeInOutCubic = (t: number): number => {
